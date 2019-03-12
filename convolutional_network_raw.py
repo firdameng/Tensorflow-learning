@@ -14,23 +14,24 @@ import tensorflow as tf
 
 # Import MNIST data
 from tensorflow.examples.tutorials.mnist import input_data
+
 mnist = input_data.read_data_sets("./data/", one_hot=True)
 
 # Training Parameters
 learning_rate = 0.001
-num_steps = 200
+num_steps = 500
 batch_size = 128
 display_step = 10
 
 # Network Parameters
-num_input = 784 # MNIST data input (img shape: 28*28)
-num_classes = 10 # MNIST total classes (0-9 digits)
-dropout = 0.75 # Dropout, probability to keep units
+num_input = 784  # MNIST data input (img shape: 28*28)
+num_classes = 10  # MNIST total classes (0-9 digits)
+dropout = 0.75  # Dropout, probability to keep units
 
 # tf Graph input
 X = tf.placeholder(tf.float32, [None, num_input])
 Y = tf.placeholder(tf.float32, [None, num_classes])
-keep_prob = tf.placeholder(tf.float32) # dropout (keep probability)
+keep_prob = tf.placeholder(tf.float32)  # dropout (keep probability)
 
 
 # Create some wrappers for simplicity
@@ -52,6 +53,13 @@ def maxpool2d(x, k=2):
 
 
 # Create model
+# conv1 =  (?, 28, 28, 32)
+# maxpool1 =  (?, 14, 14, 32)
+# conv2 =  (?, 14, 14, 64)
+# maxpool2 =  (?, 7, 7, 64)
+# fc1 =  (?, 3136)
+# fc1_add =  (?, 1024)
+# out =  (?, 10)
 def conv_net(x, weights, biases, dropout):
     # MNIST data input is a 1-D vector of 784 features (28*28 pixels)
     # Reshape to match picture format [Height x Width x Channel]
@@ -60,25 +68,31 @@ def conv_net(x, weights, biases, dropout):
 
     # Convolution Layer
     conv1 = conv2d(x, weights['wc1'], biases['bc1'])
+    print('conv1 = ', conv1.get_shape())
     # Max Pooling (down-sampling)
     conv1 = maxpool2d(conv1, k=2)
-
+    print('maxpool1 = ', conv1.get_shape())
     # Convolution Layer
     conv2 = conv2d(conv1, weights['wc2'], biases['bc2'])
+    print('conv2 = ', conv2.get_shape())
     # Max Pooling (down-sampling)
     conv2 = maxpool2d(conv2, k=2)
-
+    print('maxpool2 = ', conv2.get_shape())
     # Fully connected layer
     # Reshape conv2 output to fit fully connected layer input
     fc1 = tf.reshape(conv2, [-1, weights['wd1'].get_shape().as_list()[0]])
+    print('fc1 = ', fc1.get_shape())
     fc1 = tf.add(tf.matmul(fc1, weights['wd1']), biases['bd1'])
+    print('fc1_add = ', fc1.get_shape())
     fc1 = tf.nn.relu(fc1)
     # Apply Dropout
     fc1 = tf.nn.dropout(fc1, dropout)
 
     # Output, class prediction
     out = tf.add(tf.matmul(fc1, weights['out']), biases['out'])
+    print('out = ', out.get_shape())
     return out
+
 
 # Store layers weight & bias
 weights = {
@@ -87,7 +101,7 @@ weights = {
     # 5x5 conv, 32 inputs, 64 outputs
     'wc2': tf.Variable(tf.random_normal([5, 5, 32, 64])),
     # fully connected, 7*7*64 inputs, 1024 outputs
-    'wd1': tf.Variable(tf.random_normal([7*7*64, 1024])),
+    'wd1': tf.Variable(tf.random_normal([7 * 7 * 64, 1024])),
     # 1024 inputs, 10 outputs (class prediction)
     'out': tf.Variable(tf.random_normal([1024, num_classes]))
 }
@@ -101,14 +115,13 @@ biases = {
 
 # Construct model
 logits = conv_net(X, weights, biases, keep_prob)
-prediction = tf.nn.softmax(logits)
+prediction = tf.nn.softmax(logits)  # 连续数值转化成相对概率
 
-# Define loss and optimizer
+# Define loss and optimizer 封装了softmax
 loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
     logits=logits, labels=Y))
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 train_op = optimizer.minimize(loss_op)
-
 
 # Evaluate model
 correct_pred = tf.equal(tf.argmax(prediction, 1), tf.argmax(Y, 1))
@@ -119,11 +132,10 @@ init = tf.global_variables_initializer()
 
 # Start training
 with tf.Session() as sess:
-
     # Run the initializer
     sess.run(init)
 
-    for step in range(1, num_steps+1):
+    for step in range(1, num_steps + 1):
         batch_x, batch_y = mnist.train.next_batch(batch_size)
         # Run optimization op (backprop)
         sess.run(train_op, feed_dict={X: batch_x, Y: batch_y, keep_prob: 0.8})
@@ -140,6 +152,6 @@ with tf.Session() as sess:
 
     # Calculate accuracy for 256 MNIST test images
     print("Testing Accuracy:", \
-        sess.run(accuracy, feed_dict={X: mnist.test.images[:256],
-                                      Y: mnist.test.labels[:256],
-                                      keep_prob: 1.0}))
+          sess.run(accuracy, feed_dict={X: mnist.test.images[:256],
+                                        Y: mnist.test.labels[:256],
+                                        keep_prob: 1.0}))
