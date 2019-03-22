@@ -59,12 +59,24 @@ biases = {
 }
 
 
-# Generator
+# Generator 这是用最原始的全连接？
+# gen x =  (?, 100)
+# gen h1 =  (?, 256)
+# gen o1 =  (?, 784)
+# disc x =  (?, 784)
+# disc h1 =  (?, 256)
+# disc o1 =  (?, 1)
+# disc x =  (?, 784)
+# disc h1 =  (?, 256)
+# disc o1 =  (?, 1)
 def generator(x):
+    print('gen x = ',x.get_shape())
     hidden_layer = tf.matmul(x, weights['gen_hidden1'])
+    print('gen h1 = ', hidden_layer.get_shape())
     hidden_layer = tf.add(hidden_layer, biases['gen_hidden1'])
     hidden_layer = tf.nn.relu(hidden_layer)
     out_layer = tf.matmul(hidden_layer, weights['gen_out'])
+    print('gen o1 = ', out_layer.get_shape())
     out_layer = tf.add(out_layer, biases['gen_out'])
     out_layer = tf.nn.sigmoid(out_layer)
     return out_layer
@@ -72,10 +84,13 @@ def generator(x):
 
 # Discriminator
 def discriminator(x):
+    print('disc x = ', x.get_shape())
     hidden_layer = tf.matmul(x, weights['disc_hidden1'])
+    print('disc h1 = ', hidden_layer.get_shape())
     hidden_layer = tf.add(hidden_layer, biases['disc_hidden1'])
     hidden_layer = tf.nn.relu(hidden_layer)
     out_layer = tf.matmul(hidden_layer, weights['disc_out'])
+    print('disc o1 = ', out_layer.get_shape())
     out_layer = tf.add(out_layer, biases['disc_out'])
     out_layer = tf.nn.sigmoid(out_layer)
     return out_layer
@@ -111,6 +126,7 @@ disc_vars = [weights['disc_hidden1'], weights['disc_out'],
             biases['disc_hidden1'], biases['disc_out']]
 
 # Create training operations
+# 明确在优化过程中哪些变量需要更新，事实上也就是这些权重和偏置需要更新
 train_gen = optimizer_gen.minimize(gen_loss, var_list=gen_vars)
 train_disc = optimizer_disc.minimize(disc_loss, var_list=disc_vars)
 
@@ -130,7 +146,7 @@ with tf.Session() as sess:
         # Generate noise to feed to the generator
         z = np.random.uniform(-1., 1., size=[batch_size, noise_dim])
 
-        # Train
+        # Train  生成器判别器一起训练？？？
         feed_dict = {disc_input: batch_x, gen_input: z}
         _, _, gl, dl = sess.run([train_gen, train_disc, gen_loss, disc_loss],
                                 feed_dict=feed_dict)
