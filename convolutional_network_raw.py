@@ -130,15 +130,27 @@ accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 # Initialize the variables (i.e. assign their default value)
 init = tf.global_variables_initializer()
 
+# 控制要summary的变量
+# Create a summary to monitor cost tensor
+tf.summary.scalar("loss", loss_op)  # 必须要有添加监控的tensor
+merged_summary_op = tf.summary.merge_all()
+
 # Start training
 with tf.Session() as sess:
     # Run the initializer
     sess.run(init)
 
+    # op to write logs to Tensorboard，控制是否添加graph,默认为none
+    summary_writer = tf.summary.FileWriter("./logs/conv_raw/", sess.graph)
+
     for step in range(1, num_steps + 1):
         batch_x, batch_y = mnist.train.next_batch(batch_size)
+
         # Run optimization op (backprop)
-        sess.run(train_op, feed_dict={X: batch_x, Y: batch_y, keep_prob: 0.8})
+        _, summary = sess.run([train_op, merged_summary_op], feed_dict={X: batch_x, Y: batch_y, keep_prob: 0.8})
+        # Write logs at every iteration
+        summary_writer.add_summary(summary, step)
+
         if step % display_step == 0 or step == 1:
             # Calculate batch loss and accuracy
             loss, acc = sess.run([loss_op, accuracy], feed_dict={X: batch_x,
@@ -151,7 +163,6 @@ with tf.Session() as sess:
     print("Optimization Finished!")
 
     # Calculate accuracy for 256 MNIST test images
-    print("Testing Accuracy:", \
-          sess.run(accuracy, feed_dict={X: mnist.test.images[:256],
-                                        Y: mnist.test.labels[:256],
-                                        keep_prob: 1.0}))
+    print("Testing Accuracy:", sess.run(accuracy, feed_dict={X: mnist.test.images[:256],
+                                                             Y: mnist.test.labels[:256],
+                                                             keep_prob: 1.0}))
